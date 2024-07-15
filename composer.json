@@ -1,0 +1,14 @@
+{
+    "name": "nik/tz_raketa",
+    "type": "project",
+    "authors": [
+        {
+            "name": "Николай Евлошевский",
+            "email": "evloshevsky@gmail.com"
+        }
+    ],
+    "require": {
+        "psr/cache": "1.0.1",
+        "psr/log": "1.1.4"
+    }
+}
