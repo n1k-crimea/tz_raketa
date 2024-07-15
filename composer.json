@@ -9,6 +9,7 @@
     ],
     "require": {
         "psr/cache": "1.0.1",
-        "psr/log": "1.1.4"
+        "psr/log": "1.1.4",
+      "ext-json": "*"
     }
 }

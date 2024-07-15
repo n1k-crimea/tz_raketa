@@ -3,37 +3,39 @@
 namespace src\Decorator;
 
 use DateTime;
+use DateTimeInterface;
 use Exception;
 use Psr\Cache\CacheItemPoolInterface;
+use Psr\Cache\InvalidArgumentException;
 use Psr\Log\LoggerInterface;
-use src\Integration\DataProvider;
+use src\Integration\DataProviderInterface;
 
-class DecoratorManager extends DataProvider
+class DecoratorManager implements DataProviderInterface
 {
-    public $cache;
-    public $logger;
+    private DataProviderInterface $dataProvider;
+    private CacheItemPoolInterface $cache;
+    private LoggerInterface $logger;
 
     /**
-     * @param string $host
-     * @param string $user
-     * @param string $password
+     * @param DataProviderInterface $dataProvider
      * @param CacheItemPoolInterface $cache
+     * @param LoggerInterface $logger
      */
-    public function __construct($host, $user, $password, CacheItemPoolInterface $cache)
+    public function __construct(DataProviderInterface $dataProvider, CacheItemPoolInterface $cache, LoggerInterface $logger)
     {
-        parent::__construct($host, $user, $password);
+        $this->dataProvider = $dataProvider;
         $this->cache = $cache;
-    }
-
-    public function setLogger(LoggerInterface $logger)
-    {
         $this->logger = $logger;
     }
 
     /**
-     * {@inheritdoc}
+     * @param array $input
+     *
+     * @return array
+     * @throws InvalidArgumentException
+     * @throws Exception
      */
-    public function getResponse(array $input)
+    public function get(array $input): array
     {
         try {
             $cacheKey = $this->getCacheKey($input);
@@ -42,23 +44,34 @@ class DecoratorManager extends DataProvider
                 return $cacheItem->get();
             }
 
-            $result = parent::get($input);
+            $result = $this->dataProvider->get($input);
 
-            $cacheItem
-                ->set($result)
-                ->expiresAt(
-                    (new DateTime())->modify('+1 day')
-                );
+            if (!empty($result)) {
+                $cacheItem
+                    ->set($result)
+                    ->expiresAt(
+                        (new DateTime())->modify('+1 day')
+                    );
+                $this->cache->save($cacheItem);
+            }
 
             return $result;
         } catch (Exception $e) {
-            $this->logger->critical('Error');
+            $this->logger->critical('Ошибка при получении ответа', [
+                'exception' => $e,
+                'input' => $input,
+                'timestamp' => (new DateTime())->format(DateTimeInterface::ATOM)
+            ]);
+            throw $e;
         }
-
-        return [];
     }
 
-    public function getCacheKey(array $input)
+    /**
+     * @param array $input
+     *
+     * @return string
+     */
+    private function getCacheKey(array $input): string
     {
         return json_encode($input);
     }
