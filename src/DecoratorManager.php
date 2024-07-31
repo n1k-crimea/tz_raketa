@@ -46,14 +46,10 @@ class DecoratorManager implements DataProviderInterface
 
             $result = $this->dataProvider->get($input);
 
-            if (!empty($result)) {
-                $cacheItem
-                    ->set($result)
-                    ->expiresAt(
-                        (new DateTime())->modify('+1 day')
-                    );
-                $this->cache->save($cacheItem);
-            }
+            $cacheItem->set($result)->expiresAt(
+                (new DateTime())->modify('+1 day')
+            );
+            $this->cache->save($cacheItem);
 
             return $result;
         } catch (Exception $e) {
@@ -73,6 +69,6 @@ class DecoratorManager implements DataProviderInterface
      */
     private function getCacheKey(array $input): string
     {
-        return json_encode($input);
+        return md5(json_encode($input));
     }
 }
